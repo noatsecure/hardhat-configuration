@@ -1,0 +1,10 @@
+module hardened-fedora-core 1.0.0;
+########################################
+require {
+    class file { read write };
+    type tmpfs_t;
+    type user_t;
+}
+########################################
+#============= user_t ==============
+allow user_t tmpfs_t:file { read write };
