@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+# The original secure-time-sync.sh script was written by madaidan:
+# https://gitlab.com/madaidan/secure-time-sync
+# This is a simplified version of that script without Tor support
+
+################
+### PROGRAMS ###
+################
+# Define the secure curl command, obtained from:
+# https://www.whonix.org/wiki/Secure_Downloads#Downloads_with_scurl_-_SSL_Command_Line_Downloader
+curl='/usr/bin/curl --tlsv1.2 --proto =https';
+
+# Define the 'date' command, used to set the time and date
+date='/usr/bin/date';
+
+# Define the 'shuf' command, used to randomly choose a URL below to obtain the time and date from
+shuf='/usr/bin/shuf';
+
+#################
+### FUNCTIONS ###
+#################
+function is_cmd() {
+    # Verify if the specified command executes successfully. If not, then display an error message to stdout and exit with an error
+    [[ -z "$(command -v ${1})" ]] && echo "ERROR: Unable to execute the command: ${1}" && exit 1;
+};
+
+function select_url() {
+    # Iterate through all pool within the $pool array, randomly shuffle these pool, and then choose the first one
+    url=$(for url in "${pool[@]}"; do echo "$url"; done | /usr/bin/shuf | head -n1);
+    # The echo command is used so that the output of this function can be stored
+    echo "$url";
+};
+
+function date_and_time() {
+    # Randomly select a URL to use for obtaining the date and time
+    url="$(select_url)";
+    # Execute the curl command to obtain the header of the $url, and then grep (fixed string only) the line containing the time and date, and finally use sed to remove the specified string so that only the full timestamp from $url is left
+    date_and_time=$(${curl} --silent --head --url "${url}" | fgrep -i 'date:' | sed s/'[dD]ate: '//g);
+    # The echo command is used so that the output of this function can be stored
+    echo "${date_and_time}";
+};
+
+##############
+### VERIFY ###
+##############
+# Ensure that the $curl and $shuf commands execute properly
+is_cmd "${curl}";
+is_cmd "${date}";
+is_cmd "${shuf}";
+
+############
+### POOL ###
+############
+# Define a bash array of URLs to choose from. The headers of these URLs will be used to obtain the date and time for the system
+pool[0]='https://duckduckgo.com';
+pool[1]='https://www.eff.org';
+pool[2]='https://tails.boum.org';
+pool[3]='https://www.torproject.org';
+pool[4]='https://www.whonix.org';
+
+#############
+### FETCH ###
+#############
+# This variable will only be relevant if the first selected url from the $pool array is unreachable
+retry=0;
+
+# Set the maximum number of retries to perform if the timestamp cannot be obtained from the first selected url
+maximum_retries=10;
+
+# Start an infinite loop
+while true; do
+    # Obtain the date and time from one of the pool in the $pool array above
+    timestamp="$(date_and_time)";
+    # If the timestamp above was defined, then break the loop
+    [[ ! -z "${timestamp}" ]] && break;
+    # Otherwise, if the date and time could not be obtained after $maximum_retries, then there's probably an issue with the network, so display an error message to user and break the loop
+    [[ ${retry} == ${maximum_retries} ]] && echo "ERROR: Unable to set time and date, please check network connectivity!" && exit 1;
+    # Increase the current $retry by one
+    retry=$(( ${retry} + 1 ));
+    # Display the current $retry to stdout
+    echo "WARN: Unable to obtain the date and time, retrying (${retry} of ${maximum_retries})";
+done;
+
+###########
+### SET ###
+###########
+# Set the date and time using the timestamp obtained from the URL header
+"${date}" -s "${timestamp}";
