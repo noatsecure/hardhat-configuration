@@ -1,0 +1,29 @@
+#!/bin/sh
+#############
+### FLAGS ###
+#############
+# Flags for privacy
+flags_custom="--disable-3d-apis --disable-background-networking --disable-breakpad --disable-oopr-debug-crash-dump --disable-speech-api --disable-sync --disable-system-font-check --no-crash-upload"
+
+# Flags to enable wayland support
+flags_wayland="--enable-features=UseOzonePlatform --ozone-platform=wayland"
+
+###################
+### DIRECTORIES ###
+###################
+# Brave configuration directory
+home_config_brave="${HOME}/.config/BraveSoftware/Brave-Browser";
+
+# If the directory does not already exist, then create it
+[[ ! -d "{$home_config_brave}" ]] && mkdir -p "${home_config_brave}";
+
+#############
+### LABEL ###
+#############
+# Restore the SELinux labels for the specified directories if necessary
+/usr/sbin/restorecon -Rv ${HOME}/{.cache/BraveSoftware,.config/BraveSoftware};
+
+#############
+### START ###
+#############
+/usr/bin/brave-browser ${flags_wayland} --incognito "${@}";
