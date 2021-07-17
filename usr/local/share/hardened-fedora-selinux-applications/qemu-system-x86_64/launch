@@ -1,0 +1,158 @@
+#!/usr/bin/env bash
+
+#################
+### ARGUMENTS ###
+#################
+args="$@";
+
+############
+### HELP ###
+############
+for arg in "${args}"; do
+    if [[ "${arg}" == "-h" || "${arg}" == "--help" ]]; then
+        printf "launch\n\nNAME\n\tlaunch - automatically start a QEMU-KVM virtual machine\n";
+        printf "\nSYNOPSIS\n\tlaunch [options]\n";
+        printf "\n\nDESCRIPTION\n\tThe $(basename ${0}) script starts a QEMU-KVM virtual machine instance. This involves starting in snapshot mode by default, which saves nothing to the [disk_image] file.\n";
+        printf "\n\nOPTIONS\n";
+        printf "\t--help,-h\t\tshow this message\n\n";
+        printf "\t--disk [filename]\tSpecify the image to use\n\n";
+        printf "\t--enable-real-mode\tAll changes made to the virtual machine will be saved on shutdown\n\n";
+        printf "\t--enable-sound\t\tEnable the sound hardware from the host system in the guest\n\n";
+        printf "\t--enable-ssh\t\tForward port 22 in the guest to port 9922 on the host, allowing the host to ssh into the guest system\n\n";
+        printf "\t--iso [filename]\tSpecify the ISO image to launch; used for installing an operating system. This option should be used with '--enable-real-mode'\n\n";
+        printf "\t--samba [directory]\tDirectory to share via Samba\n\n";
+        printf "\nDISK\n\tThe '--disk' argument refers to the disk image that will be booted. This can be a <name>.raw or <name>.qcow2 file for example. By default, the script will have a hardcoded disk image.\n";
+        printf "\n\nNOTES\n"
+        printf "\t1) When the '--enable-ssh' argument is used, the following command needs to be executed on the host in order to SSH into the guest:\n";
+        printf "\n\t\tssh guestuser@hostname -p 9922\n\n\twhere 'guestuser' is the username in the guest, and 'hostname' is the virtual machine's hostname (eg. 'fedora', 'debian', etc.).\n";
+        printf "\n\t2) When a Samba directory is specified, the guest machine can access it via the address 'smb://10.0.2.4'"
+        printf "\n\n";
+        exit 0;
+    fi;
+done;
+
+#################
+### FUNCTIONS ###
+#################
+function is_enabled() {
+    if [ -z $(echo "${args}" | grep -o "${1}") ]; then
+        export enable_flag=false;
+    else
+        export enable_flag=true;
+    fi;
+};
+
+############
+### DISK ###
+############
+disk=$(echo "${args}" | grep -Eo '\-\-disk ?.+' | awk '{print $2}' | tr -d [:blank:]);
+
+if [ -z "${disk}" ]; then
+    disk="$(dirname $0)/fedora.raw";
+else
+    [[ ! -f "${disk}" ]] && echo "ERROR: File not found: \"${disk}\"" && exit 1;
+fi;
+
+
+###########
+### ISO ###
+###########
+iso=$(echo "${args}" | grep -Eo '\-\-iso ?.+' | awk '{print $2}' | tr -d [:blank:]);
+
+if [ ! -z "${iso}" ]; then
+    [[ ! -f "${iso}" ]] && echo "ERROR: Unable to find ISO file: \"${iso}\"" && exit 1;
+fi;
+
+#############
+### SAMBA ###
+#############
+samba=$(echo "${args}" | grep -Eo '\-\-samba ?.+' | awk '{print $2}' | tr -d [:blank:]);
+
+if [ ! -z "${samba}" ]; then
+    [[ ! -d "${samba}" ]] && echo "ERROR: Directory to share (via Samba) not found: \"${samba}\"" && exit 1;
+fi;
+
+#############
+### SOUND ###
+#############
+is_enabled "\-\-enable-sound";
+enable_sound="${enable_flag}";
+
+###########
+### SSH ###
+###########
+is_enabled "\-\-enable-ssh";
+enable_ssh="${enable_flag}";
+
+#####################
+### REAL/SNAPSHOT ###
+#####################
+is_enabled "\-\-enable-real-mode";
+real_mode="${enable_flag}";
+
+if [ "${real_mode}" = true ]; then
+    while true; do
+        read -p "WARN: Enabling 'real mode' means that all changes will be saved on shutdown. Continue? (y/n): " ans;
+        if [ "${ans}" = "y" ]; then
+            break;
+        elif [ "${ans}" = "n" ]; then
+            echo "INFO: Aborting.";
+            exit 0;
+        else
+            echo "WARN: Invalid response, please try again.";
+        fi;
+    done;
+fi;
+
+############
+### QEMU ###
+############
+qemu_cmd="qemu-system-x86_64 -enable-kvm";
+qemu_cpu="-cpu host";
+qemu_disk="-drive aio=native,cache=none,file=${disk},format=raw,if=virtio";
+qemu_gfx="-vga virtio";
+qemu_memory="-m 2G";
+qemu_performance="-smp cpus=$(nproc)";
+
+if [ ! -z "${iso}" ]; then
+    qemu_iso="-boot d -cdrom ${iso}";
+else
+    qemu_iso="";
+fi;
+
+if [ "${real_mode}" = true ]; then
+    chmod 644 "${disk}";
+    qemu_real_mode="";
+else
+    chmod 444 "${disk}";
+    echo "INFO: Snapshot mode enabled, no changes will be saved on shutdown";
+    qemu_real_mode="-snapshot";
+fi;
+
+if [ ! -z "${samba}" ]; then
+    printf "INFO: Samba sharing enabled for host directory \"${samba}\". To access the directory in the guest, go to the address \"smb://10.0.2.4\"\n";
+    qemu_samba="-net nic -net user,smb=${samba}";
+else
+    qemu_samba="";
+fi;
+
+if [ "${enable_sound}" = true ]; then
+    echo "INFO: Sound support enabled";
+    qemu_sound="-device intel-hda -device hda-output";
+else
+    qemu_sound="";
+fi;
+
+if [ "${enable_ssh}" = true ]; then
+    printf "INFO: SSH enabled on host port '9922'. Use the command:\n\n\t\tssh -p 9922 <vm_user>@localhost\n\n";
+    qemu_ssh="-nic user,hostfwd=tcp::9922-:22";
+else
+    qemu_ssh="";
+fi;
+
+cmd="${qemu_cmd} ${qemu_cpu} ${qemu_disk} ${qemu_gfx} ${qemu_memory} ${qemu_performance} ${qemu_real_mode} ${qemu_samba} ${qemu_sound} ${qemu_ssh} ${qemu_iso} -sandbox on";
+
+#############
+### START ###
+#############
+${cmd};
