@@ -1,0 +1,8 @@
+module desktop_home 1.0.0;
+########################################
+require {
+    attribute file_type, non_auth_file_type, non_security_file_type, polymember, user_home_type; 
+}
+########################################
+type desktop_home_t, file_type, non_auth_file_type, non_security_file_type, polymember, user_home_type;
+########################################
