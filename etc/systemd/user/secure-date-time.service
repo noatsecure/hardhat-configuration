@@ -1,0 +1,9 @@
+[Unit]
+Description=secure date and time
+After=network-online.target
+
+[Service]
+ExecStart=/usr/local/bin/secure-date-time
+
+[Install]
+WantedBy=network-online.target
