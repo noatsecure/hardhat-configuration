@@ -2,9 +2,34 @@ module imv 1.0.0;
 ########################################
 require {
     attribute application_domain_type, application_exec_type, entry_type, exec_type, file_type, non_auth_file_type, non_security_file_type, userdomain, x_userdomain;
-    class process { transition };
+    class chr_file { getattr ioctl map open read write };
+    class dir { getattr open read search };
+    class fd { use };
+    class file { entrypoint execute getattr map open read write };
+    class lnk_file { getattr read };
+    class process { execmem fork getsched rlimitinh setsched siginh signal transition };
+    class shm { associate create destroy getattr read unix_read unix_write write };
+    class unix_stream_socket { accept bind connect connectto create getattr listen read shutdown write };
     role user_r;
+    type cache_home_t;
+    type desktop_home_t;
+    type devtty_t;
+    type documents_home_t;
+    type downloads_home_t;
+    type dri_device_t;
+    type etc_t;
+    type ld_so_cache_t;
+    type ld_so_t;
+    type lib_t;
+    type passwd_file_t;
+    type root_t;
+    type sysfs_t;
+    type textrel_shlib_t;
+    type tmpfs_t;
+    type user_devpts_t;
+    type user_home_t;
     type user_t;
+    type usr_t;
 }
 ########################################
 type imv_t, application_domain_type, userdomain, x_userdomain;
@@ -12,44 +37,14 @@ type imv_exec_t, application_exec_type, entry_type, exec_type, file_type, non_au
 role user_r types imv_t;
 type_transition user_t imv_exec_t: process imv_t;
 ########################################
-require {
-	type imv_exec_t;
-	type security_t;
-	type selinux_config_t;
-	type etc_t;
-	type passwd_file_t;
-	type user_t;
-	type tmpfs_t;
-    type root_t;
-    type downloads_home_t;
-	type imv_t;
-	type dri_device_t;
-	type user_home_t;
-	type lib_t;
-	type ld_so_t;
-	type sssd_var_lib_t;
-	type textrel_shlib_t;
-	type ld_so_cache_t;
-	type usr_t;
-	type cache_home_t;
-    type devtty_t;
-	type user_devpts_t;
-	type sysfs_t;
-	class process { execmem fork getsched noatsecure rlimitinh setsched siginh signal transition };
-	class fd use;
-	class dir { read search };
-	class file { entrypoint execute getattr map open read write };
-	class chr_file { getattr ioctl map open read write };
-	class filesystem getattr;
-	class lnk_file { getattr read };
-	class unix_stream_socket { accept bind connect connectto create getattr listen read shutdown write };
-	class sock_file write;
-}
-
 #============= imv_t ==============
 allow imv_t cache_home_t:file { getattr map open read write };
+allow imv_t desktop_home_t:dir { getattr open read search };
+allow imv_t desktop_home_t:file { getattr map open read };
 allow imv_t devtty_t:chr_file { open read write };
-allow imv_t downloads_home_t:dir { read search };
+allow imv_t documents_home_t:dir { getattr open read search };
+allow imv_t documents_home_t:file { getattr map open read };
+allow imv_t downloads_home_t:dir { getattr open read search };
 allow imv_t downloads_home_t:file { getattr map open read };
 allow imv_t dri_device_t:chr_file { getattr ioctl map open read write };
 allow imv_t etc_t:file { getattr open read };
@@ -60,6 +55,7 @@ allow imv_t lib_t:file { execute getattr map open read };
 allow imv_t passwd_file_t:file { getattr open read };
 allow imv_t root_t:dir search;
 allow imv_t self:process { execmem fork getsched setsched signal };
+allow imv_t self:shm { create destroy read unix_read unix_write write };
 allow imv_t self:unix_stream_socket { accept bind connect create getattr listen read shutdown write };
 allow imv_t sysfs_t:dir read;
 allow imv_t sysfs_t:file { getattr open read };
@@ -75,4 +71,5 @@ allow imv_t usr_t:file { getattr map open read };
 allow user_t imv_t:dir search;
 allow user_t imv_t:fd use;
 allow user_t imv_t:file { getattr open read };
-allow user_t imv_t:process { noatsecure rlimitinh siginh transition };
+allow user_t imv_t:process { rlimitinh siginh transition };
+allow user_t imv_t:shm { associate getattr read unix_read unix_write write };
