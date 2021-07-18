@@ -16,7 +16,7 @@ function usage() {
 ### PROGRAMS ###
 ################
 checkmodule='/usr/bin/checkmodule';
-semodule='/usr/sbin/semodulex';
+semodule='/usr/sbin/semodule';
 semodule_package='/usr/bin/semodule_package';
 
 #################
