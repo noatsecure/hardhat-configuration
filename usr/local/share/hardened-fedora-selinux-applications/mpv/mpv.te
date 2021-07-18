@@ -10,7 +10,7 @@ require {
     class file { create entrypoint execute execute_no_trans getattr lock map open read write };
     class lnk_file { getattr read };
     class netlink_route_socket { bind create getattr nlmsg_read read write };
-    class process { execmem fork getsched noatsecure rlimitinh setsched siginh transition };
+    class process { execmem fork getattr getsched rlimitinh setsched siginh sigkill signal transition };
     class shm { create destroy read unix_read unix_write write };
     class sock_file { write };
     class tcp_socket { connect create getattr getopt name_connect read setopt write };
@@ -116,7 +116,7 @@ allow mpv_t self:fifo_file { getattr read write };
 allow mpv_t self:file { getattr open read };
 allow mpv_t self:lnk_file { getattr read };
 allow mpv_t self:netlink_route_socket { bind create getattr nlmsg_read read write };
-allow mpv_t self:process { execmem fork getsched setsched };
+allow mpv_t self:process { execmem fork getsched setsched signal };
 allow mpv_t self:shm { create destroy read unix_read unix_write write };
 allow mpv_t self:tcp_socket { connect create getattr getopt read setopt write };
 allow mpv_t self:udp_socket { connect create getattr setopt write };
@@ -147,8 +147,8 @@ allow mpv_t var_run_t:dir { getattr search };
 #============= pulseaudio_t ==============
 allow pulseaudio_t mpv_t:fd use;
 #============= user_t ==============
-allow user_t mpv_t:dir search;
+allow user_t mpv_t:dir {getattr search };
 allow user_t mpv_t:fd use;
 allow user_t mpv_t:file { getattr open read };
 allow user_t mpv_t:lnk_file read;
-allow user_t mpv_t:process { noatsecure rlimitinh siginh transition };
+allow user_t mpv_t:process { getattr rlimitinh siginh sigkill signal transition };
