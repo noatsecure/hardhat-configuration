@@ -1,7 +1,19 @@
 #!/usr/bin/env python3
-from os.path import abspath,expanduser,isfile
+from os.path import abspath,basename,expanduser,isfile
 from re import search
 from sys import argv,exit
+
+#############
+### USAGE ###
+#############
+def usage():
+    # Name of this script without any paths
+    name = basename(argv[0])
+    print(f"NAME\n\t{name} - python script to generate the 'require' section within a SELinux policy module file\n")
+    print(f"SYNOPSIS\n\t{name} <module>.te\n")
+    print(f"DESCRIPTION\n\t{name} is a Python script provided by the Hardened Fedora project to generate the 'require' section for SELinux policy modules. The only argument this script takes is the path to the <module>.te file.\n")
+    print(f"EXAMPLE\n\t1. {name} chromium-browser.te\n")
+    print("\n")
 
 #################
 ### FUNCTIONS ###
@@ -11,8 +23,10 @@ def args():
         # Argument 1: Path to the SELinux module file
         filename = abspath(expanduser(argv[1]))
     except IndexError:
+        # Display the usage information
+        usage()
         # If no arguments were specified, then display an error message to stdout
-        print("ERROR: Specify the 'filename.te'")
+        print("ERROR: Argument 1: Specify the SELinux '.te' file")
         # Exit with an error
         exit(1)
     # Return the $filename
