@@ -12,7 +12,7 @@ require {
     class filesystem { getattr };
     class lnk_file { create getattr read unlink };
     class netlink_route_socket { bind create getattr nlmsg_read read write };
-    class process { execmem fork getattr getcap getsched noatsecure rlimitinh setcap setrlimit setsched siginh sigkill signal transition };
+    class process { execmem fork getattr getcap getsched rlimitinh setcap setrlimit setsched siginh sigkill signal transition };
     class shm { create destroy unix_read unix_write };
     class sock_file { create getattr unlink write };
     class tcp_socket { connect create getattr getopt name_connect read setopt write };
@@ -181,4 +181,4 @@ allow user_t chromium-freeworld_t:fd use;
 allow user_t chromium-freeworld_t:fifo_file write;
 allow user_t chromium-freeworld_t:file { getattr open read };
 allow user_t chromium-freeworld_t:lnk_file read;
-allow user_t chromium-freeworld_t:process { getattr noatsecure rlimitinh siginh signal transition };
+allow user_t chromium-freeworld_t:process { getattr rlimitinh siginh signal transition };
