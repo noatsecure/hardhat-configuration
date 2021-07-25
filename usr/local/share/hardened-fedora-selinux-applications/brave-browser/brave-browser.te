@@ -72,7 +72,7 @@ type_transition user_t brave-browser_exec_t: process brave-browser_t;
 allow brave-browser_t bin_t:dir { getattr search };
 allow brave-browser_t bin_t:file { execute execute_no_trans getattr map open read };
 allow brave-browser_t bin_t:lnk_file { getattr read };
-allow brave-browser_t brave-browser_exec_t:file { entrypoint execute getattr open read };
+allow brave-browser_t brave-browser_exec_t:file { entrypoint execute execute_no_trans getattr open read };
 allow brave-browser_t cache_home_t:dir { add_name create getattr open read remove_name search write };
 allow brave-browser_t cache_home_t:file { create getattr lock map open read rename unlink write };
 allow brave-browser_t cert_t:dir { getattr open read search };
