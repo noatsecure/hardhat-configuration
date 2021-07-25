@@ -42,7 +42,7 @@ role user_r types zathura_t;
 type_transition user_t zathura_exec_t: process zathura_t;
 ########################################
 #============= user_t ==============
-allow user_t zathura_t:dir search;
+allow user_t zathura_t:dir { getattr search };
 allow user_t zathura_t:fd use;
 allow user_t zathura_t:file { getattr open read };
 allow user_t zathura_t:process { getattr rlimitinh siginh transition };
