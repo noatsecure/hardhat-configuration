@@ -10,7 +10,7 @@ require {
     class filesystem { getattr };
     class lnk_file { create getattr read unlink };
     class netlink_route_socket { bind create getattr nlmsg_read read write };
-    class process { execmem fork getsched rlimitinh setsched siginh transition };
+    class process { execmem fork getattr getsched rlimitinh setsched siginh transition };
     class shm { associate create destroy getattr read unix_read unix_write write };
     class tcp_socket { connect create getattr getopt name_connect read setopt write };
     class udp_socket { connect create getattr };
@@ -126,5 +126,5 @@ allow user_t thunderbird_t:dir search;
 allow user_t thunderbird_t:fd use;
 allow user_t thunderbird_t:file { getattr open read };
 allow user_t thunderbird_t:lnk_file read;
-allow user_t thunderbird_t:process { rlimitinh siginh transition };
+allow user_t thunderbird_t:process { getattr rlimitinh siginh transition };
 allow user_t thunderbird_t:shm { associate getattr read unix_read unix_write write };
