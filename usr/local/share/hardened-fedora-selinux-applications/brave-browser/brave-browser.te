@@ -26,6 +26,7 @@ require {
     type cert_t;
     type config_home_t;
     type device_t;
+    type downloads_home_t;
     type dri_device_t;
     type etc_t;
     type fonts_cache_t;
@@ -81,6 +82,8 @@ allow brave-browser_t config_home_t:dir { add_name create getattr open read remo
 allow brave-browser_t config_home_t:file { append create getattr lock map open read rename setattr unlink write };
 allow brave-browser_t config_home_t:lnk_file { create read unlink };
 allow brave-browser_t device_t:dir { getattr open read search };
+allow brave-browser_t downloads_home_t:dir { add_name getattr open read remove_name search write };
+allow brave-browser_t downloads_home_t:file { create getattr open read rename setattr unlink write };
 allow brave-browser_t dri_device_t:chr_file { getattr ioctl map open read write };
 allow brave-browser_t etc_t:dir { getattr open read search };
 allow brave-browser_t etc_t:file { getattr map open read };
