@@ -7,7 +7,7 @@ require {
     class fd { use };
     class file { entrypoint execute getattr lock map open read write };
     class lnk_file { read };
-    class process { fork getsched rlimitinh setsched siginh transition };
+    class process { fork getattr getsched rlimitinh setsched siginh transition };
     class shm { create };
     class sock_file { write };
     class unix_stream_socket { connect connectto create read write };
@@ -45,7 +45,7 @@ type_transition user_t zathura_exec_t: process zathura_t;
 allow user_t zathura_t:dir search;
 allow user_t zathura_t:fd use;
 allow user_t zathura_t:file { getattr open read };
-allow user_t zathura_t:process { rlimitinh siginh transition };
+allow user_t zathura_t:process { getattr rlimitinh siginh transition };
 #============= zathura_t ==============
 allow zathura_t config_home_t:file { getattr map open read write };
 allow zathura_t data_home_t:dir read;
