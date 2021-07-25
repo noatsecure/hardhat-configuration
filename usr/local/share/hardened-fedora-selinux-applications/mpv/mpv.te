@@ -133,7 +133,7 @@ allow mpv_t textrel_shlib_t:file { execute getattr map open read };
 allow mpv_t tmpfs_t:dir { getattr open read search };
 allow mpv_t tmpfs_t:file { getattr map read write };
 allow mpv_t tmp_t:dir { getattr search };
-allow mpv_t user_devpts_t:chr_file { append getattr read write };
+allow mpv_t user_devpts_t:chr_file { append getattr ioctl read write };
 allow mpv_t user_home_dir_t:dir { getattr search };
 allow mpv_t user_home_dir_t:file { create getattr open write };
 allow mpv_t user_home_t:file { open read };
