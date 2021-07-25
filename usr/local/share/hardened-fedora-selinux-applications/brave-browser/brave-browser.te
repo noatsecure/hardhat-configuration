@@ -169,5 +169,5 @@ allow user_t brave-browser_t:fd use;
 allow user_t brave-browser_t:fifo_file write;
 allow user_t brave-browser_t:file { getattr open read };
 allow user_t brave-browser_t:lnk_file read;
-allow user_t brave-browser_t:process { getattr rlimitinh siginh transition };
+allow user_t brave-browser_t:process { getattr rlimitinh siginh signal transition };
 allow user_t brave-browser_t:shm { associate getattr read unix_read unix_write write };
