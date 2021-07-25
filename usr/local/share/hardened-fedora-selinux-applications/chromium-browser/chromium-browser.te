@@ -11,7 +11,7 @@ require {
     class file { append create entrypoint execute execute_no_trans getattr lock map open read rename setattr system unlink write };
     class filesystem { getattr };
     class lnk_file { create getattr read unlink };
-    class netlink_kobject_uevent_socket { bind create getattr setopt };
+    class netlink_kobject_uevent_socket { bind create getattr read setopt };
     class netlink_route_socket { bind create getattr nlmsg_read read write };
     class process { execmem fork getattr getcap getsched rlimitinh setcap setrlimit setsched siginh sigkill signal transition };
     class shm { create destroy unix_read unix_write };
@@ -130,7 +130,7 @@ allow chromium-browser_t self:dir { getattr open read search };
 allow chromium-browser_t self:fifo_file { getattr read write };
 allow chromium-browser_t self:file { getattr open read write };
 allow chromium-browser_t self:lnk_file { getattr read };
-allow chromium-browser_t self:netlink_kobject_uevent_socket { bind create getattr setopt };
+allow chromium-browser_t self:netlink_kobject_uevent_socket { bind create getattr read setopt };
 allow chromium-browser_t self:netlink_route_socket { bind create getattr nlmsg_read read write };
 allow chromium-browser_t self:process { execmem fork getcap getsched setcap setrlimit setsched sigkill signal };
 allow chromium-browser_t self:shm { create destroy unix_read unix_write };
