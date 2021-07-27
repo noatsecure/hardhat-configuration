@@ -1,3 +1,0 @@
-Mozilla Thunderbird has the following issues:
-
-1) By default, the $HOME/.thunderbird directory will label certain files as 'user_home_dir_t', which is used for directories in /home (eg. '/home/user' and '/home/sysadmin'). This means that user_t cannot remove, edit, etc. the $HOME/.thunderbird unless a superuser runs the following command first: `restorecon -Rv /home/user/.thunderbird`
