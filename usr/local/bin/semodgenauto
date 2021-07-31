@@ -1,0 +1,185 @@
+#!/usr/bin/env python3
+from os import getcwd,listdir
+from os.path import abspath,basename,dirname,expanduser,isdir,isfile,join
+from selinux import getfilecon
+from shutil import copytree,move
+from subprocess import run
+from sys import argv,exit
+
+###################
+### DIRECTORIES ###
+###################
+# Full path to the directory containing the template SELinux policy module and shell script for labelling
+template = expanduser('/usr/local/share/hardened-fedora-selinux/templates/labels')
+
+################
+### BINARIES ###
+################
+seinfo = expanduser('/usr/bin/seinfo')
+
+#############
+### USAGE ###
+#############
+def usage():
+    name = basename(argv[0])
+    print(f"NAME\n\t{name} - python script to automatically generate a SELinux policy module for the specified file/directory\n")
+    print(f"SYNOPSIS\n\t{name} /path/to/file_or_dir /path/to/output_directory/\n")
+    print(f"DESCRIPTION\n\t{name} is a Python script where argument 1 is the specified file/directory to generate a SELinux policy module for. Argument 2 is an optional argument that allows users to specify the output directory where the SELinux policy module directory will be created. By default, argument 2 will be the current working directory of the user.\n")
+    print(f"EXAMPLE\n\t1. {name} /usr/bin/cat\n\n\t2. {name} /usr/bin/cat /home/user/selinux\n")
+    print("\n")
+
+#################
+### FUNCTIONS ###
+#################
+def args():
+    try:
+        # Argument 1: Full path to the file/directory to generate a label for
+        name = abspath(expanduser(argv[1]))
+    except IndexError:
+        # If argument was not specified, then display the usage information
+        usage()
+        # Display an error message to user
+        print('ERROR: No file or directory specified')
+        # Exit with an error
+        exit(1)
+    try:
+        # Argument 2 (Optional): Path to the directory where the SELinux policy module directory for $name will be created
+        outdir = abspath(expanduser(argv[2]))
+    except IndexError:
+        # If no $outdir is specified, then default to the user's current working directory
+        outdir = getcwd()
+    # Return the arguments without validity checking since this will be done in the main function
+    return(name, outdir)
+
+def is_exists(name):
+    # If $name is a valid directory or valid file, then return True
+    if isdir(name) or isfile(name): return(True)
+    # Otherwise, display an error message to user
+    print(f"ERROR: Unable to find the following file or directory: '{name}'")
+    # Exit with an error
+    exit(1)
+
+def type_attributes(name):
+    # Obtain the SELinux contexts for $name, which will provide the user, role, and type for $name as the last entry in the output list
+    contexts = getfilecon(name)[-1]
+    try:
+        # Split $contexts via the semicolon to separate the user, role, type, and then obtain the entry that ends with '_t' to define the type. Finally, use `.strip()` to remove any extraneous whitespace
+        context_type = [entry for entry in contexts.split(':') if entry.strip().endswith('_t')][0].strip()
+    except IndexError:
+        # If the type was not found, then display an error message to user
+        print(f"ERROR: Unable to obtain the SELinux type (eg. 'bin_t', 'lib_t', etc.) for '{name}'")
+        # Exit with an error
+        exit(1)
+    # Use `seinfo` to obtain the attributes for $context_type
+    # '--flat' = Exclude headers and other identifiers; makes it easier for scripts
+    # '-x' = Show the attributes for the $context_type
+    # '-t' = Specify that a type is being queried
+    cmd = run([seinfo, '--flat', '-x', '-t', context_type], capture_output = True) 
+    # Check if the $cmd successfully executed
+    if cmd.returncode != 0:
+        # If not, then display an error message to user
+        print(f"ERROR: The `seinfo` command failed to execute:\n\n\t{cmd}")
+        # Exit with an error
+        exit(1)
+    # Obtain the attributes for the $context_type, which will be used for $name. This is done by keeping all entries from the `seinfo` command except the first, which contains the name and aliases for the $context_type that is not needed
+    attributes = ', '.join([entry.strip() for entry in cmd.stdout.decode().split(',') if not entry.startswith('type')])
+    # Return $attributes
+    return(attributes)
+
+def selinux_changes(name):
+    # Change all periods in $name to underscores
+    name = name.replace('.', '_')
+    # SELinux does not utilize /usr/lib64 and will instruct users to specify '/usr/lib' instead
+    name = name.replace('/usr/lib64', '/usr/lib')
+    # Return all changes made to $name
+    return(name)
+
+def copy_template(selinux_changes_name, outdir):
+    # Define the destination directory that will contain the new SELinux policy module for $name
+    dest = join(outdir, selinux_changes_name)
+    try:
+        # Copy the $src template directory to $dest
+        copytree(template, dest)
+    except FileExistsError:
+        # If the directory already exists at $dest, display an error message to user
+        print(f"ERROR: Directory already exists: '{dest}'")
+        # Exit with an error
+        exit(1)
+    # Return $dest
+    return(dest)
+
+class edit:
+    def __init__(self, selinux_changes_name, selinux_changes_name_path, attributes, dest):
+        # Define and verify the SELinux policy module and shell script used for labelling are present in $dest
+        [template_te, label_sh] = self.define(dest)
+        # Edit the SELinux policy module to specify the $name
+        self.write(selinux_changes_name, selinux_changes_name_path, attributes, label_sh)
+        # Edit the SELinux policy module to specify the $name
+        self.write(selinux_changes_name, selinux_changes_name_path, attributes, template_te)
+        # Rename the 'template.te' file to reflect the $selinux_changes_name, which is also used as the module name
+        self.mv(selinux_changes_name, template_te)
+
+    def define(self, dest):
+        # Define the SELinux policy module file that should exist within $dest
+        template_te = join(dest, 'template.te')
+        # Define the shell script that labels that should exist within $dest
+        label_sh = join(dest, 'label.sh')
+        # Verify both of these files exist
+        is_exists(template_te)
+        is_exists(label_sh)
+        # Return both file variables
+        return(template_te, label_sh)
+
+    def write(self, selinux_changes_name, selinux_changes_name_path, attributes, filename):
+        # Open $filename and obtain its contents
+        with open(filename, 'r') as f: contents = f.readlines()
+        # Replace all instances of NAME_t, which specifies $name (with SELinux specific changes to the path only)
+        contents = [entry.replace('NAME_PATH', selinux_changes_name_path) for entry in contents]
+        # Replace all instances of NAME_t, which specifies $name (with SELinux specific changes)
+        contents = [entry.replace('NAME_t', selinux_changes_name) for entry in contents]
+        # Replace all instances of NAME, which specifies $name (with SELinux specific changes)
+        contents = [entry.replace('NAME', selinux_changes_name) for entry in contents]
+        # Replace all instances of ATTRIBUTE (a placeholder) to $attributes, if applicable
+        contents = [entry.replace('ATTRIBUTE', attributes) for entry in contents]
+        # Overwrite $filename with the new $contents 
+        with open(filename, 'w') as f: f.write(''.join(contents))
+
+    def mv(self, selinux_changes_name, template_te):
+        # Obtain the full path to $template_te
+        root = dirname(template_te)
+        # Define the new filename for 'template.te'
+        renamed_template_te = join(root, f"{selinux_changes_name}.te")
+        # Perform the rename
+        move(template_te, renamed_template_te)
+
+############
+### MAIN ###
+############
+def main(name, outdir):
+    # Verify $name is a valid file or directory
+    is_exists(name) 
+    # Verify $outdir is a valid directory
+    is_exists(outdir)
+    # Obtain the attributes of the current type associated with $name
+    attributes = type_attributes(name)
+    # Perform SELinux specific changes to $name and remove its path 
+    selinux_changes_name = basename(selinux_changes(name))
+    # Perform SELinux specific changes only the path, not $name itself
+    selinux_changes_name_path = join(selinux_changes(dirname(name)), basename(name))
+    # Create the SELinux policy module directory for $name using $template
+    dest = copy_template(selinux_changes_name, outdir)
+    # Edit the template files to reflect $name 
+    edit(selinux_changes_name, selinux_changes_name_path, attributes, dest)
+
+#############
+### START ###
+#############
+if __name__ == '__main__':
+    # Verify $template is a valid directory
+    is_exists(template)
+    # Verify the $seinfo binary exists, used to obtain the attributes of SELinux types
+    is_exists(seinfo)
+    # Parse user-specified arguments
+    [name, outdir] = args()
+    # Execute the main script
+    main(name, outdir)
