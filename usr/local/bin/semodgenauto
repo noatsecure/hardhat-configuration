@@ -136,7 +136,7 @@ class edit:
         # Replace all instances of NAME_t, which specifies $name (with SELinux specific changes to the path only)
         contents = [entry.replace('NAME_PATH', selinux_changes_name_path) for entry in contents]
         # Replace all instances of NAME_t, which specifies $name (with SELinux specific changes)
-        contents = [entry.replace('NAME_t', selinux_changes_name) for entry in contents]
+        contents = [entry.replace('NAME_t', f"{selinux_changes_name}_t") for entry in contents]
         # Replace all instances of NAME, which specifies $name (with SELinux specific changes)
         contents = [entry.replace('NAME', selinux_changes_name) for entry in contents]
         # Replace all instances of ATTRIBUTE (a placeholder) to $attributes, if applicable
