@@ -89,6 +89,8 @@ def type_attributes(name):
 def selinux_changes(name):
     # Change all periods in $name to underscores
     name = name.replace('.', '_')
+    # Change all pluses to in $name to 'pp'
+    name = name.replace('+', 'p')
     # SELinux does not utilize /usr/lib64 and will instruct users to specify '/usr/lib' instead
     name = name.replace('/usr/lib64', '/usr/lib')
     # Return all changes made to $name
