@@ -10,7 +10,7 @@ from sys import argv,exit
 ### DIRECTORIES ###
 ###################
 # Full path to the directory containing the template SELinux policy module and shell script for labelling
-template = expanduser('/usr/local/share/hardened-fedora-selinux/templates/labels')
+template = expanduser('/usr/local/share/hardhat-selinux/templates/labels')
 
 ################
 ### BINARIES ###
