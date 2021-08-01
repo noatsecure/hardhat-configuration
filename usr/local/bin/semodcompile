@@ -7,7 +7,7 @@ function usage() {
     name="$(basename ${0})";
     printf "NAME\n\t${name} - shell script to compile and install SELinux module files\n\n";
     printf "SYNOPSIS\n\t${name} <module>.te\n\n";
-    printf "DESCRIPTION\n\t${name} is a shell script provided by the Hardened Fedora project to compile and install SELinux policy modules. The only argument this script takes is the path to the <module>.te file.\n\n";
+    printf "DESCRIPTION\n\t${name} is a shell script provided by the HardHat project to compile and install SELinux policy modules. The only argument this script takes is the path to the <module>.te file.\n\n";
     printf "EXAMPLES\n\t1. ${name} chromium-browser.te\n";
     printf "\n\n";
 };

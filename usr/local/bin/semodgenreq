@@ -11,7 +11,7 @@ def usage():
     name = basename(argv[0])
     print(f"NAME\n\t{name} - python script to generate the 'require' section within a SELinux policy module file\n")
     print(f"SYNOPSIS\n\t{name} <module>.te\n")
-    print(f"DESCRIPTION\n\t{name} is a Python script provided by the Hardened Fedora project to generate the 'require' section for SELinux policy modules. The only argument this script takes is the path to the <module>.te file.\n")
+    print(f"DESCRIPTION\n\t{name} is a Python script provided by the HardHat project to generate the 'require' section for SELinux policy modules. The only argument this script takes is the path to the <module>.te file.\n")
     print(f"EXAMPLE\n\t1. {name} chromium-browser.te\n")
     print("\n")
 
