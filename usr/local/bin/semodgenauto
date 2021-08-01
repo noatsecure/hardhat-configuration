@@ -23,9 +23,10 @@ seinfo = expanduser('/usr/bin/seinfo')
 def usage():
     name = basename(argv[0])
     print(f"NAME\n\t{name} - python script to automatically generate a SELinux policy module for the specified file/directory\n")
-    print(f"SYNOPSIS\n\t{name} /path/to/file_or_dir /path/to/output_directory/\n")
-    print(f"DESCRIPTION\n\t{name} is a Python script provided by the HardHat project that automatically generates a SELinux policy module (label only) for the specified file/directory. Argument 2 is an optional argument that allows users to specify the output directory where the SELinux policy module directory will be created, which by default will be the current working directory of the user.\n")
-    print(f"EXAMPLE\n\t1. {name} /usr/bin/cat\n\n\t2. {name} /usr/bin/cat /home/user/selinux\n")
+    print(f"SYNOPSIS\n\t{name} /path/to/file_or_dir [OPTIONS]\n")
+    print(f"DESCRIPTION\n\t{name} is a Python script provided by the HardHat project that automatically generates a SELinux policy module (label only) for the specified file/directory.\n")
+    print(f"OPTIONS\n\t-d\tDirectory to output the generated SELinux policy module directory\n\t-l\tCustom label to use\n")
+    print(f"EXAMPLE\n\t1. {name} /usr/bin/cat\n\n\t2. {name} /usr/bin/cat -d /home/user/selinux\n\n\t3. {name} /usr/bin/cat -l custom_label_t\n\n\t4. {name} /usr/bin/cat -d ~/output_dir -l custom_label_t\n")
     print("\n")
 
 #################
@@ -42,14 +43,38 @@ def args():
         print('ERROR: No file or directory specified')
         # Exit with an error
         exit(1)
+    #----------------------#
+    #-- OUTPUT DIRECTORY --#
+    #----------------------#
+    # Optional Flag: Path to the directory where the SELinux policy module directory for $name will be created
+    outdir = options('-d')
+    # If no $outdir is specified, then default to the user's current working directory
+    outdir = getcwd()
+    #------------------#
+    #-- CUSTOM LABEL --#
+    #------------------#
+    # Optional Flag: Custom label to use for the SELinux policy module
+    label = options('-l')
+    # Return the arguments
+    return(name, outdir, label)
+
+def options(flag):
     try:
-        # Argument 2 (Optional): Path to the directory where the SELinux policy module directory for $name will be created
-        outdir = abspath(expanduser(argv[2]))
+        # Define the $value of the specified $flag to be the next index
+        value = [argv[i + 1] for i in range(2, len(argv)) if argv[i].strip() == flag]
     except IndexError:
-        # If no $outdir is specified, then default to the user's current working directory
-        outdir = getcwd()
-    # Return the arguments without validity checking since this will be done in the main function
-    return(name, outdir)
+        # If the $flag was specified but there was no value, then display an error message to user
+        print(f"ERROR: Please pass the value for the flag: '{flag}'")
+        # Exit with an error
+        exit(1)
+    try:
+        # Define the $value and remove extraneous whitespace
+        value = value[0].strip()
+    except IndexError:
+        # If the $flag was not found, then return False
+        return(False)
+    # Return the $value for the specified $flag
+    return(value)
 
 def is_exists(name):
     # If $name is a valid directory or valid file, then return True
@@ -111,13 +136,13 @@ def copy_template(selinux_changes_name, outdir):
     return(dest)
 
 class edit:
-    def __init__(self, selinux_changes_name, selinux_changes_name_path, attributes, dest):
+    def __init__(self, label, selinux_changes_name, selinux_changes_name_path, attributes, dest):
         # Define and verify the SELinux policy module and shell script used for labelling are present in $dest
         [template_te, label_sh] = self.define(dest)
-        # Edit the SELinux policy module to specify the $name
-        self.write(selinux_changes_name, selinux_changes_name_path, attributes, label_sh)
-        # Edit the SELinux policy module to specify the $name
-        self.write(selinux_changes_name, selinux_changes_name_path, attributes, template_te)
+        # Edit the SELinux policy module to specify the correct names and attributes
+        self.write(label, selinux_changes_name, selinux_changes_name_path, attributes, label_sh)
+        # Edit the shell script that applies the SELinux policy module label to specify the correct name and path
+        self.write(label, selinux_changes_name, selinux_changes_name_path, attributes, template_te)
         # Rename the 'template.te' file to reflect the $selinux_changes_name, which is also used as the module name
         self.mv(selinux_changes_name, template_te)
 
@@ -132,13 +157,18 @@ class edit:
         # Return both file variables
         return(template_te, label_sh)
 
-    def write(self, selinux_changes_name, selinux_changes_name_path, attributes, filename):
+    def write(self, label, selinux_changes_name, selinux_changes_name_path, attributes, filename):
         # Open $filename and obtain its contents
         with open(filename, 'r') as f: contents = f.readlines()
         # Replace all instances of NAME_t, which specifies $name (with SELinux specific changes to the path only)
         contents = [entry.replace('NAME_PATH', selinux_changes_name_path) for entry in contents]
-        # Replace all instances of NAME_t, which specifies $name (with SELinux specific changes)
-        contents = [entry.replace('NAME_t', f"{selinux_changes_name}_t") for entry in contents]
+        # Check if the user has specified a custom label to use
+        if label is False:
+            # Replace all instances of NAME_t, which specifies $name (with SELinux specific changes)
+            contents = [entry.replace('NAME_t', f"{selinux_changes_name}_t") for entry in contents]
+        else:
+            # Replace all instances of NAME_t with the custom label
+            contents = [entry.replace('NAME_t', label) for entry in contents]
         # Replace all instances of NAME, which specifies $name (with SELinux specific changes)
         contents = [entry.replace('NAME', selinux_changes_name) for entry in contents]
         # Replace all instances of ATTRIBUTE (a placeholder) to $attributes, if applicable
@@ -157,7 +187,7 @@ class edit:
 ############
 ### MAIN ###
 ############
-def main(name, outdir):
+def main(name, outdir, label):
     # Verify $name is a valid file or directory
     is_exists(name) 
     # Verify $outdir is a valid directory
@@ -171,7 +201,7 @@ def main(name, outdir):
     # Create the SELinux policy module directory for $name using $template
     dest = copy_template(selinux_changes_name, outdir)
     # Edit the template files to reflect $name 
-    edit(selinux_changes_name, selinux_changes_name_path, attributes, dest)
+    edit(label, selinux_changes_name, selinux_changes_name_path, attributes, dest)
 
 #############
 ### START ###
@@ -182,6 +212,6 @@ if __name__ == '__main__':
     # Verify the $seinfo binary exists, used to obtain the attributes of SELinux types
     is_exists(seinfo)
     # Parse user-specified arguments
-    [name, outdir] = args()
+    [name, outdir, label] = args()
     # Execute the main script
-    main(name, outdir)
+    main(name, outdir, label)
