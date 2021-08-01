@@ -24,7 +24,7 @@ def usage():
     name = basename(argv[0])
     print(f"NAME\n\t{name} - python script to automatically generate a SELinux policy module for the specified file/directory\n")
     print(f"SYNOPSIS\n\t{name} /path/to/file_or_dir /path/to/output_directory/\n")
-    print(f"DESCRIPTION\n\t{name} is a Python script where argument 1 is the specified file/directory to generate a SELinux policy module for. Argument 2 is an optional argument that allows users to specify the output directory where the SELinux policy module directory will be created. By default, argument 2 will be the current working directory of the user.\n")
+    print(f"DESCRIPTION\n\t{name} is a Python script provided by the HardHat project that automatically generates a SELinux policy module (label only) for the specified file/directory. Argument 2 is an optional argument that allows users to specify the output directory where the SELinux policy module directory will be created, which by default will be the current working directory of the user.\n")
     print(f"EXAMPLE\n\t1. {name} /usr/bin/cat\n\n\t2. {name} /usr/bin/cat /home/user/selinux\n")
     print("\n")
 
