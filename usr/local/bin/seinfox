@@ -117,7 +117,7 @@ def stdout(desc):
 ############
 ### MAIN ###
 ############
-def main(target, get_user = True, get_role = True, get_target = True):
+def main(target, get_user = True, get_role = True, get_type = True):
     # Obtain the SELinux contexts for $target, which includes the user, role and type
     [seuser, serole, setype] = contexts(target)
     # Obtain the description for $seuser
