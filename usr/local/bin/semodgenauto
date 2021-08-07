@@ -1,10 +1,26 @@
 #!/usr/bin/env python3
+from importlib.machinery import SourceFileLoader
+from importlib.util import module_from_spec,spec_from_loader
 from os import getcwd,listdir
 from os.path import abspath,basename,dirname,expanduser,isdir,isfile,join
 from selinux import getfilecon
 from shutil import copytree,move
 from subprocess import run
-from sys import argv,exit
+from sys import argv,exit,modules
+
+######################
+### CUSTOM MODULES ###
+######################
+# Path to the module; should be in the name directory as this script
+path_seinfox = join(dirname(abspath(argv[0])), 'seinfox')
+
+# Since the `seinfox` utility does not have the '.py' extension, it needs to be loaded in a special way
+spec = spec_from_loader('seinfox', SourceFileLoader('seinfox', path_seinfox))
+seinfox = module_from_spec(spec)
+spec.loader.exec_module(seinfox)
+
+# Define the main function as $seinfox
+seinfox = seinfox.main
 
 ###################
 ### DIRECTORIES ###
@@ -21,12 +37,12 @@ seinfo = expanduser('/usr/bin/seinfo')
 ### USAGE ###
 #############
 def usage():
-    target = basename(argv[0])
-    print(f"NAME\n\t{target} - python script to automatically generate a SELinux policy module for the specified file/directory\n")
-    print(f"SYNOPSIS\n\t{target} /path/to/file_or_dir [OPTIONS]\n")
-    print(f"DESCRIPTION\n\t{target} is a Python script provided by the HardHat project that automatically generates a SELinux policy module (label only) for the specified file/directory.\n")
+    name = basename(argv[0])
+    print(f"NAME\n\t{name} - python script to automatically generate a SELinux policy module for the specified file/directory\n")
+    print(f"SYNOPSIS\n\t{name} /path/to/file_or_dir [OPTIONS]\n")
+    print(f"DESCRIPTION\n\t{name} is a Python script provided by the HardHat project that automatically generates a SELinux policy module (label only) for the specified file/directory.\n")
     print(f"OPTIONS\n\t-d\tDirectory to output the generated SELinux policy module directory\n\t-h\tDisplay this message\n\t-l\tCustom label to use\n\t-n\tName of the SELinux policy module directory to create\n")
-    print(f"EXAMPLE\n\t1. {target} /usr/bin/cat\n\n\t2. {target} /usr/bin/cat -d /home/user/selinux\n\n\t3. {target} /usr/bin/cat -l custom_label_t\n\n\t4. {target} /usr/bin/cat -d ~/output_dir -l custom_label_t\n\n\t5. {target} /usr/bin/cat -d /tmp -l label_t -n cat_label_dir\n")
+    print(f"EXAMPLE\n\t1. {name} /usr/bin/cat\n\n\t2. {name} /usr/bin/cat -d /home/user/selinux\n\n\t3. {name} /usr/bin/cat -l custom_label_t\n\n\t4. {name} /usr/bin/cat -d ~/output_dir -l custom_label_t\n\n\t5. {name} /usr/bin/cat -d /tmp -l label_t -n cat_label_dir\n")
     print("\n")
 
 #################
@@ -99,33 +115,6 @@ def is_exists(target):
     print(f"ERROR: Unable to find the following file or directory: '{target}'")
     # Exit with an error
     exit(1)
-
-def type_attributes(target):
-    # Obtain the SELinux contexts for $target, which will provide the user, role, and type for $target as the last entry in the output list
-    contexts = getfilecon(target)[-1]
-    try:
-        # Split $contexts via the semicolon to separate the user, role, type, and then obtain the entry that ends with '_t' to define the type. Finally, use `.strip()` to remove any extraneous whitespace
-        context_type = [entry for entry in contexts.split(':') if entry.strip().endswith('_t')][0].strip()
-    except IndexError:
-        # If the type was not found, then display an error message to user
-        print(f"ERROR: Unable to obtain the SELinux type (eg. 'bin_t', 'lib_t', etc.) for '{target}'")
-        # Exit with an error
-        exit(1)
-    # Use `seinfo` to obtain the attributes for $context_type
-    # '--flat' = Exclude headers and other identifiers; makes it easier for scripts
-    # '-x' = Show the attributes for the $context_type
-    # '-t' = Specify that a type is being queried
-    cmd = run([seinfo, '--flat', '-x', '-t', context_type], capture_output = True) 
-    # Check if the $cmd successfully executed
-    if cmd.returncode != 0:
-        # If not, then display an error message to user
-        print(f"ERROR: The `seinfo` command failed to execute:\n\n\t{cmd}")
-        # Exit with an error
-        exit(1)
-    # Obtain the attributes for the $context_type, which will be used for $target. This is done by keeping all entries from the `seinfo` command except the first, which contains the name and aliases for the $context_type that is not needed
-    attributes = ', '.join([entry.strip() for entry in cmd.stdout.decode().split(',') if not entry.startswith('type')])
-    # Return $attributes
-    return(attributes)
 
 def selinux_changes(target):
     # Change all periods in $target to underscores
@@ -209,7 +198,9 @@ def main(target, outdir, label, name):
     # Verify $outdir is a valid directory
     is_exists(outdir)
     # Obtain the attributes of the current type associated with $target
-    attributes = type_attributes(target)
+    [_, _, attributes] = seinfox(target, False, False, True)
+    # Join the attributes to create a string
+    attributes = ' '.join(attributes)
     # Perform SELinux specific changes to $target and remove its path 
     selinux_changes_target = basename(selinux_changes(target))
     # Perform SELinux specific changes only the path, not $target itself
