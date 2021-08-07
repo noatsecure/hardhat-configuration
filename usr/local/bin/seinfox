@@ -106,6 +106,28 @@ def description(context, get_context):
     # Return the list containing the description for the $context
     return(desc)
 
+def ignore_alias(setype_desc):
+    try:
+        # Obtain the list index of the specified string within $setype_desc
+        i = setype_desc.index('alias')
+    except ValueError:
+        # If there are no aliases, then return $setype_desc as-is
+        return(setype_desc)
+    # The start will the the index before the position of 'alias'
+    start = i - 1
+    try:
+        # Define the end of the aliases by the curly brace
+        end = setype_desc.index('},')
+    except ValueError:
+        # If the end curly brace could not be found, then display an error to user; it should always be found
+        print('ERROR: Unable to find the ending curly brace ("},") for the aliases')
+        # Exit with an error
+        exit(1)
+    # Remove all entries from the $start to the $end inclusively
+    del setype_desc[start:end + 1]
+    # Return the new $setype_desc list
+    return(setype_desc)
+
 def stdout(desc):
     try:
         # Join the $desc list and display to user
@@ -126,6 +148,8 @@ def main(target, get_user = True, get_role = True, get_type = True):
     serole_desc = description(serole, get_role)
     # Obtain the description for $setype
     setype_desc = description(setype, get_type)
+    # Aliases are not needed within $setype_desc, so remove them
+    setype_desc = ignore_alias(setype_desc)
     # Return the decriptions for all contexts
     return(seuser_desc, serole_desc, setype_desc)
 
