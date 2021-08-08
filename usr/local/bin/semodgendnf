@@ -126,18 +126,12 @@ class selinux:
     def __init__(self, package, bin_t, lib_t, outdir):
         # Ensure that at least one of the lists have entries
         self.valid(bin_t, lib_t)
-        # Create the SELinux policy module directory
-        directory = self.create(package, bin_t, lib_t, outdir)
-        # Obtain the 'label.sh' file from the SELinux policy module directory as well as its contents
-        [label_sh, contents] = self.label(directory, bin_t, lib_t)
-        # Define the `semanage` command used to label files and directories for SELinux
-        cmd = self.semanage(contents)
-        # Add all entries from $bin_t to the $contents list
-        contents = self.add(bin_t, contents, cmd)
-        # Add all entries from $lib_t to the $contents list
-        contents = self.add(lib_t, contents, cmd)
-        # Overwrite $label_sh with the new $contents
-        self.write(label_sh, contents)
+        # Create the SELinux policy module directory and make it a global variable so it can be returned
+        self.directory = self.create(package, bin_t, lib_t, outdir)
+
+    def __call__(self):
+        # Return the SELinux policy module directory
+        return(self.directory)
 
     def valid(self, bin_t, lib_t):
         # Check if both $bin_t and $lib_t are False
@@ -149,15 +143,34 @@ class selinux:
 
     def create(self, package, bin_t, lib_t, outdir):
         try:
-            # Create a SELinux policy module directory just for the first entry of $bin_t. The label.sh file will be edited to specify the rest of the $bin_t list as well as the $lib_t list too
-            semodgenauto(bin_t[0], outdir, f"{package}_t", package)
-        except TypeError: 
-            # If $bin_t is False, then use the first entry of $lib_t instead
-            semodgenauto(lib_t[0], outdir, f"{package}_t", package)
+            # Define $gen_t as the first entry in the $bin_t list
+            gen_t = bin_t[0]
+        except TypeError:
+            # If $bin_t is False, then use the first entry of the $lib_t list instead
+            gen_t = lib_t[0]
+        try:
+            # Create a SELinux policy module directory just for $gen_t. The label.sh file will be edited to specify the rest of the $bin_t list as well as the $lib_t list too
+            semodgenauto(gen_t, outdir, f"{package}_t", package)
+        except FileExistsError:
+            # If the SELinux policy module directory already exists, then do nothing
+            pass
         # Define the full path to the SELinux policy module directory
         selinux_dir = join(outdir, package)
         # Return the directory
         return(selinux_dir)
+
+class edit:
+    def __init__(self, directory, bin_t, lib_t):
+        # Obtain the 'label.sh' file from the SELinux policy module directory as well as its contents
+        [label_sh, contents] = self.label(directory, bin_t, lib_t)
+        # Define the `semanage` command used to label files and directories for SELinux
+        cmd = self.semanage(contents)
+        # Add all entries from $bin_t to the $contents list
+        contents = self.add(bin_t, contents, cmd)
+        # Add all entries from $lib_t to the $contents list
+        contents = self.add(lib_t, contents, cmd)
+        # Overwrite $label_sh with the new $contents
+        self.write(label_sh, contents)
 
     def label(self, directory, bin_t, lib_t):
         # Define the full path to the 'label.sh' shell script to edit
@@ -209,12 +222,16 @@ class selinux:
 def main(package, outdir):
     # Obtain the list of binaries ($bin_t) and libraries ($lib_t) to create labels for
     [bin_t, lib_t] = contents(package)()
-    #
-    selinux(package, bin_t, lib_t, outdir)
+    # Use the `semodgenauto` script to create the SELinux policy module directory, which is the return variable
+    directory = selinux(package, bin_t, lib_t, outdir)()
+    # Edit the shell script that defines the SELinux labelling to include all entries within $bin_t and $lib_t
+    edit(directory, bin_t, lib_t)
         
 #############
 ### START ###
 #############
 if __name__ == '__main__':
+    # Obtain the arguments from user
     [package, outdir] = args()
+    # Start the main function
     main(package, outdir)
