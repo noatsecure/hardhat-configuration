@@ -72,7 +72,7 @@ class contents:
         # Obtain the set containing all files associated with $package
         raw = self.rpm(package)
         # List of all binaries within $package that are labeled as 'bin_t', a generic label
-        self.bin_t = self.generic(raw, ('/sbin', '/usr/bin', '/usr/sbin'), 'bin_t')
+        self.bin_t = self.generic(raw, ('/bin', '/sbin', '/usr/bin', '/usr/sbin'), 'bin_t')
         # List of all binaries within $package that are labeled as 'lib_t', a generic label
         lib_t = self.generic(raw, ('/usr/lib'), 'lib_t')
         # Filter the $lib_t list
