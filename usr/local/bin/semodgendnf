@@ -1,0 +1,220 @@
+#!/usr/bin/env python3
+from importlib.machinery import SourceFileLoader
+from importlib.util import module_from_spec,spec_from_loader
+from os.path import abspath,basename,dirname,expanduser,join
+from selinux import getfilecon
+from subprocess import run
+from sys import argv,exit
+
+######################
+### CUSTOM MODULES ###
+######################
+def custom_module(filename):
+    # Define the name based on the filename
+    name = basename(filename)
+    # Create $spec that is used to load the module
+    spec = spec_from_loader(name, SourceFileLoader(name, filename))
+    # Define the module
+    mod = module_from_spec(spec)
+    # Load the module based on $spec
+    spec.loader.exec_module(mod)
+    # Return the module object
+    return(mod)
+
+#-------------#
+#-- SEINFOX --#
+#-------------#
+# Since the `seinfox` module does not have the '.py' extension, it needs to be loaded in a more complicated way
+seinfox = custom_module(join(dirname(argv[0]), 'seinfox'))
+
+# Define the contexts function as $contexts
+contexts = seinfox.contexts
+
+#------------------#
+#-- SEMODGENAUTO --#
+#------------------#
+# Load the `semodgenauto` python script
+semodgenauto = custom_module(join(dirname(argv[0]), 'semodgenauto'))
+
+# Define the main function as $semodgenauto
+semodgenauto = semodgenauto.main
+
+#############
+### USAGE ###
+#############
+def usage():
+    pass
+
+#################
+### FUNCTIONS ###
+#################
+def args():
+    try:
+        package = argv[1]
+    except IndexError:
+        # Display usage information to the user
+        usage()
+        # Display error message to user
+        print('ERROR: Argument 1: Name of the package')
+        # Exit with an error
+        exit(1)
+    # Define the directory where the SELinux policy module directory will be created in
+    try:
+        outdir = expanduser(argv[2])
+    except IndexError:
+        # Default output directory
+        outdir = expanduser('/usr/local/share/hardhat-selinux-local') 
+    # Return the arguments passed by the user
+    return(package, outdir)
+
+class contents:
+    def __init__(self, package):
+        # Obtain the set containing all files associated with $package
+        raw = self.rpm(package)
+        # List of all binaries within $package that are labeled as 'bin_t', a generic label
+        self.bin_t = self.generic(raw, ('/sbin', '/usr/bin', '/usr/sbin'), 'bin_t')
+        # List of all binaries within $package that are labeled as 'lib_t', a generic label
+        lib_t = self.generic(raw, ('/usr/lib'), 'lib_t')
+        # Filter the $lib_t list
+        self.lib_t = self.lib(lib_t)
+
+    def __call__(self):
+        return(self.bin_t, self.lib_t)
+
+    def rpm(self, package):
+        cmd = run(['/usr/bin/rpm', '-q', '-l', package], capture_output = True)
+        # Obtain the output from the $cmd, decode it, and remove extraneous whitespaces
+        stdout = cmd.stdout.decode().strip()
+        # If the returncode was 1, then an error occured
+        if cmd.returncode == 1:
+            # Display the $stdout which contains the error message from `rpm`
+            print(f"ERROR: Command failed: '{stdout}'")
+            # Exit with an error
+            exit(1)
+        # Create a set that contains every entry within $stdout, but remove extraneous whitespace from each entry and also ensure that all entries are non-empty. Finally, a the list is converted into a set to remove duplicates
+        raw = set([entry.strip() for entry in stdout.split('\n') if entry])
+        # Return the $raw set
+        return(raw)
+
+    def generic(self, raw, paths, generic_t):
+        # Define a list of all entries within any of the $paths above
+        entries = [entry for entry in raw if entry.startswith(paths)]
+        # Define a list that will contain the path to all entries that are labeled $generic_t, which is a generic label
+        gen_t = []
+        # Iterate through all entries within the $entries list
+        for entry in entries:
+            # Skip all entries that start with the specified string
+            if entry.startswith('/usr/lib/.build-id'): continue
+            # Obtain the SELinux type context for the current entry
+            [_, _, setype] = contexts(entry)
+            # If the label is generic, then add $entry to the $gen_t list
+            if setype == generic_t: gen_t.append(entry)
+        # Set $gen_t to False if it's empty
+        if not gen_t: gen_t = False
+        # Return $gen_t
+        return(gen_t)
+
+    def lib(self, lib_t):
+        # If $lib_t is False then return immediately
+        if (lib_t is False): return(lib_t)
+        # Only keep entries that have 'so' in the last section of the name once split via '.'
+        lib_t = [entry for entry in lib_t if 'so' in entry.rsplit('.', 1)[-1]]
+        # Return the new $lib_t list
+        return(lib_t)
+
+class selinux:
+    def __init__(self, package, bin_t, lib_t, outdir):
+        # Ensure that at least one of the lists have entries
+        self.valid(bin_t, lib_t)
+        # Create the SELinux policy module directory
+        directory = self.create(package, bin_t, lib_t, outdir)
+        # Obtain the 'label.sh' file from the SELinux policy module directory as well as its contents
+        [label_sh, contents] = self.label(directory, bin_t, lib_t)
+        # Define the `semanage` command used to label files and directories for SELinux
+        cmd = self.semanage(contents)
+        # Add all entries from $bin_t to the $contents list
+        contents = self.add(bin_t, contents, cmd)
+        # Add all entries from $lib_t to the $contents list
+        contents = self.add(lib_t, contents, cmd)
+        # Overwrite $label_sh with the new $contents
+        self.write(label_sh, contents)
+
+    def valid(self, bin_t, lib_t):
+        # Check if both $bin_t and $lib_t are False
+        if (bin_t is False) and (lib_t is False):
+            # If so, then display an error message to user
+            print('ERROR: There are no binaries of type "bin_t" and libraries of type "lib_t"')
+            # Exit with an error
+            exit(1)
+
+    def create(self, package, bin_t, lib_t, outdir):
+        try:
+            # Create a SELinux policy module directory just for the first entry of $bin_t. The label.sh file will be edited to specify the rest of the $bin_t list as well as the $lib_t list too
+            semodgenauto(bin_t[0], outdir, f"{package}_t", package)
+        except TypeError: 
+            # If $bin_t is False, then use the first entry of $lib_t instead
+            semodgenauto(lib_t[0], outdir, f"{package}_t", package)
+        # Define the full path to the SELinux policy module directory
+        selinux_dir = join(outdir, package)
+        # Return the directory
+        return(selinux_dir)
+
+    def label(self, directory, bin_t, lib_t):
+        # Define the full path to the 'label.sh' shell script to edit
+        label_sh = join(directory, 'label.sh')
+        try:
+            # Open the $label_sh and obtain its existing contents
+            with open(label_sh, 'r') as f: contents = f.readlines()
+        except FileNotFoundError:
+            # If the file cannot be found, then display an error message
+            print(f"ERROR: Unable to open the following file for editing: '{label_sh}'")
+            # Exit with an error
+            exit(1)
+        # Return the $label_sh and its $contents
+        return(label_sh, contents)
+
+    def semanage(self, contents):
+        try:
+            # Define the `semanage` command from $label_sh
+            cmd = [entry for entry in contents if entry.startswith('/usr/sbin/semanage')][0]
+        except IndexError:
+            # If the `semanage` command could not be found in $label_sh, display an error message
+            print("ERROR: Unable to extract the `semanage` command from the following file: '{label_sh}'")
+            # Exit with an error
+            exit(1)
+        # Define the command to include everything but the path to the file/directory to be labeled
+        cmd = ' '.join(cmd.split()[0:-1])
+        # Return the $cmd
+        return(cmd)
+
+    def add(self, gen_t, contents, cmd):
+        try:
+            # Add the list of commands that label each entry in $gen_t
+            contents = contents + [f"{cmd} {entry};\n" for entry in gen_t]
+        except TypeError:
+            # If $gen_t is a boolean, return $contents as-is
+            return(contents)
+        # Remove duplicates from everything but the first line, which is the shebang
+        contents = [contents[0]] + sorted(set(contents[1:]))
+        # Return the new $contents
+        return(contents)
+
+    def write(self, label_sh, contents):
+        # Overwrite $label_sh with $contents
+        with open(label_sh, 'w') as f: f.write(''.join(contents))
+
+############
+### MAIN ###
+############
+def main(package, outdir):
+    # Obtain the list of binaries ($bin_t) and libraries ($lib_t) to create labels for
+    [bin_t, lib_t] = contents(package)()
+    #
+    selinux(package, bin_t, lib_t, outdir)
+        
+#############
+### START ###
+#############
+if __name__ == '__main__':
+    [package, outdir] = args()
+    main(package, outdir)
