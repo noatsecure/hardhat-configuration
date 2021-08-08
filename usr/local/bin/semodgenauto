@@ -130,9 +130,7 @@ def copy_template(dest):
         copytree(template, dest)
     except FileExistsError:
         # If the directory already exists at $dest, display an error message to user
-        print(f"ERROR: Directory already exists: '{dest}'")
-        # Exit with an error
-        exit(1)
+        raise FileExistsError(f"ERROR: Directory already exists: '{dest}'")
 
 class edit:
     def __init__(self, dct, dest):
