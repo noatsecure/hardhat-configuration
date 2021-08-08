@@ -239,6 +239,10 @@ class merge:
         sctn = [lst[index] for lst in all_te if (lst is not False)]
         # Add the beginning of the line back, along with a unique list of all section from each $lst within $all_te
         sctn = sorted(set([entry.replace(';', '') for lst in sctn for entry in lst.split()[1:]]))
+        # Ensure all entries have a comma at the end of them
+        sctn = [f"{entry}," if not entry.endswith(',') else entry for entry in sctn]
+        # Remove the comma from the last entry
+        sctn[-1] = sctn[-1].replace(',', '')
         # Add the semicolon that goes at the end of the line to the last entry in $sctn 
         sctn[-1] = f"{sctn[-1]};\n"
         return(sctn)
