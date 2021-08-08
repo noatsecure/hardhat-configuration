@@ -43,12 +43,24 @@ semodgenauto = semodgenauto.main
 ### USAGE ###
 #############
 def usage():
-    pass
+    name = basename(argv[0])
+    print(f"NAME\n\t{name} - python script to automatically generate a SELinux policy module for all binaries and libraries within the specified package\n")
+    print(f"SYNOPSIS\n\t{name} package_name [OPTIONS]\n")
+    print(f"DESCRIPTION\n\t{name} is a Python script provided by the HardHat project that automatically generates a single SELinux policy module (label only) for all of the binaries within the package labelled as 'bin_t', and all of the libraries within the package labelled as 'lib_t'. The label will be based on the package's name, eg. Binaries within the 'coreutils' package will have the label 'bin_coreutils_t', and the libraries will be labelled 'lib_coreutils_t'\n")
+    print(f"OPTIONS\n\t-d\tDirectory to output the generated SELinux policy module directory\n\t-h\tDisplay this message\n\t-l\tCustom label to use\n\t-n\tName of the SELinux policy module directory to create\n")
+    print(f"EXAMPLE\n\t1. {name} /usr/bin/cat\n\n\t2. {name} /usr/bin/cat -d /home/user/selinux\n\n\t3. {name} /usr/bin/cat -l custom_label_t\n\n\t4. {name} /usr/bin/cat -d ~/output_dir -l custom_label_t\n\n\t5. {name} /usr/bin/cat -d /tmp -l label_t -n cat_label_dir\n")
+    print("\n")
 
 #################
 ### FUNCTIONS ###
 #################
 def args():
+    # Check if the user has specified the help flag (any argument)
+    if any([True for arg in argv if arg == '-h']):
+        # If so, then display the usage information
+        usage()
+        # Exit
+        exit(0)
     try:
         package = argv[1]
     except IndexError:
@@ -160,15 +172,17 @@ class selinux:
         return(selinux_dir)
 
 class edit:
-    def __init__(self, directory, bin_t, lib_t):
+    def __init__(self, package, directory, bin_t, lib_t):
         # Obtain the 'label.sh' file from the SELinux policy module directory as well as its contents
         [label_sh, contents] = self.label(directory, bin_t, lib_t)
         # Define the `semanage` command used to label files and directories for SELinux
         cmd = self.semanage(contents)
+        # Keep only the header of the file since the existing contents are not needed
+        contents = [contents[0]]
         # Add all entries from $bin_t to the $contents list
-        contents = self.add(bin_t, contents, cmd)
+        contents = self.add(bin_t, contents, cmd, f"{package}_bin_t")
         # Add all entries from $lib_t to the $contents list
-        contents = self.add(lib_t, contents, cmd)
+        contents = self.add(lib_t, contents, cmd, f"{package}_lib_t")
         # Overwrite $label_sh with the new $contents
         self.write(label_sh, contents)
 
@@ -200,13 +214,15 @@ class edit:
         # Return the $cmd
         return(cmd)
 
-    def add(self, gen_t, contents, cmd):
+    def add(self, gen_t, contents, cmd, label):
         try:
             # Add the list of commands that label each entry in $gen_t
             contents = contents + [f"{cmd} {entry};\n" for entry in gen_t]
         except TypeError:
             # If $gen_t is a boolean, return $contents as-is
             return(contents)
+        # Change the existing ${package}_t label to either ${package}_bin_t for binaries or ${package}_lib_t for libraries
+        contents = [entry.replace(f"{label.split('_')[0]}_t", label) for entry in contents]
         # Remove duplicates from everything but the first line, which is the shebang
         contents = [contents[0]] + sorted(set(contents[1:]))
         # Return the new $contents
@@ -225,7 +241,7 @@ def main(package, outdir):
     # Use the `semodgenauto` script to create the SELinux policy module directory, which is the return variable
     directory = selinux(package, bin_t, lib_t, outdir)()
     # Edit the shell script that defines the SELinux labelling to include all entries within $bin_t and $lib_t
-    edit(directory, bin_t, lib_t)
+    edit(package, directory, bin_t, lib_t)
         
 #############
 ### START ###
