@@ -125,6 +125,8 @@ def ignore_alias(setype_desc):
         start = i
     # Remove all entries from the $start to the $end inclusively
     del setype_desc[start:end + 1]
+    # If no curly braces are used, then everything past $start is deleted. This means a semicolon will need to be added to the last entry
+    if start == i: setype_desc[-1] = f"{setype_desc[-1]};"
     # Return the new $setype_desc list
     return(setype_desc)
 
