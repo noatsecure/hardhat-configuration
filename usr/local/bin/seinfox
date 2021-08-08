@@ -119,10 +119,10 @@ def ignore_alias(setype_desc):
         # Define the end of the aliases by the curly brace
         end = setype_desc.index('},')
     except ValueError:
-        # If the end curly brace could not be found, then display an error to user; it should always be found
-        print('ERROR: Unable to find the ending curly brace ("},") for the aliases')
-        # Exit with an error
-        exit(1)
+        # If the end curly brace could not be found, then the rest of the entries are aliases
+        end = len(setype_desc)
+        # Also, set $start to $i since there will also be no beginning curly brace either
+        start = i
     # Remove all entries from the $start to the $end inclusively
     del setype_desc[start:end + 1]
     # Return the new $setype_desc list
