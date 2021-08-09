@@ -119,14 +119,10 @@ def ignore_alias(setype_desc):
         # Define the end of the aliases by the curly brace
         end = setype_desc.index('},')
     except ValueError:
-        # If the end curly brace could not be found, then the rest of the entries are aliases
-        end = len(setype_desc)
-        # Also, set $start to $i since there will also be no beginning curly brace either
-        start = i
+        # If the end curly brace could not be found, then only the next index is associated with the alias
+        end = i + 1
     # Remove all entries from the $start to the $end inclusively
     del setype_desc[start:end + 1]
-    # If no curly braces are used, then everything past $start is deleted. This means a semicolon will need to be added to the last entry
-    if start == i: setype_desc[-1] = f"{setype_desc[-1]};"
     # Return the new $setype_desc list
     return(setype_desc)
 
