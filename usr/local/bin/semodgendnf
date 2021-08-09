@@ -236,16 +236,19 @@ class merge:
 
     def attributes(self, all_te, index):
         # The $index line is where the section are located in the file
-        sctn = [lst[index] for lst in all_te if (lst is not False)]
-        # Add the beginning of the line back, along with a unique list of all section from each $lst within $all_te
-        sctn = sorted(set([entry.replace(';', '') for lst in sctn for entry in lst.split()[1:]]))
+        attr = [lst[index] for lst in all_te if (lst is not False)]
+        # Add the beginning of the line back
+        attr = [entry.replace(';', '') for lst in attr for entry in lst.split()[1:]]
         # Ensure all entries have a comma at the end of them
-        sctn = [f"{entry}," if not entry.endswith(',') else entry for entry in sctn]
+        attr = [f"{entry}," if not entry.endswith(',') else entry for entry in attr]
+        # Remove duplicate entries and sort in alphabetical order
+        attr = sorted(set(attr))
         # Remove the comma from the last entry
-        sctn[-1] = sctn[-1].replace(',', '')
-        # Add the semicolon that goes at the end of the line to the last entry in $sctn 
-        sctn[-1] = f"{sctn[-1]};\n"
-        return(sctn)
+        attr[-1] = attr[-1].replace(',', '')
+        # Add the semicolon that goes at the end of the line to the last entry in $attr 
+        attr[-1] = f"{attr[-1]};\n"
+        # Return the $attr list
+        return(attr)
 
     def tes(self, all_te, module):
         # Define the output list
@@ -271,7 +274,7 @@ class merge:
         #-- TYPE --#
         #----------#
         # Obtain all unique $types from each $lst within $all_te
-        types = list(set([lst[6].strip() for lst in all_te if (lst is not False)]))
+        types = sorted(set([lst[6].strip() for lst in all_te if (lst is not False)]))
         # Add a newline to the end of the $types list
         types[-1] = f"{types[-1]}\n"
         #
