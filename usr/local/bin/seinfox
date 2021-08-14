@@ -65,9 +65,7 @@ def contexts(target):
         contexts = getfilecon(target)[-1]
     except FileNotFoundError:
         # If $target is not a valid file or directory, then display an error message to user
-        print(f"ERROR: Unable to locate the specified file or directory: '{target}'")
-        # Exit with an error
-        exit(1)
+        raise FileNotFoundError(f"ERROR: Unable to locate the specified file or directory: '{target}'")
     # Split the contexts and clean each entry by removing extraneous whitespace
     contexts = [entry.strip() for entry in contexts.split(':') if entry]
     # Define the three entries in $contexts
