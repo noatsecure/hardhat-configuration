@@ -130,8 +130,8 @@ class contents:
     def lib(self, lib_t):
         # If $lib_t is False then return immediately
         if (lib_t is False): return(lib_t)
-        # Only keep entries that have 'so' in the last section of the name once split via '.'
-        lib_t = [entry for entry in lib_t if 'so' in entry.rsplit('.', 1)[-1]]
+        # Only keep entries that have 'so' in the name once split via '.'
+        lib_t = [entry for entry in lib_t if 'so' in entry.split('.')]
         # Return the new $lib_t list
         return(lib_t)
 
@@ -151,7 +151,7 @@ class selinux:
         # Check if both $bin_t and $lib_t are False
         if (bin_t is False) and (lib_t is False):
             # If so, then display an error message to user
-            print('ERROR: There are no binaries of type "bin_t" and libraries of type "lib_t"')
+            print('ERROR: There are no binaries of type "bin_t" or libraries of type "lib_t"')
             # Exit with an error
             exit(1)
 
@@ -400,6 +400,8 @@ class edit:
             return(contents)
         # Change the existing ${package}_t label to either ${package}_bin_t for binaries or ${package}_lib_t for libraries
         gen_t_contents = [entry.replace(curr_label, label) for entry in gen_t_contents]
+        # Change the path of '/usr/lib64' to '/usr/lib' if applicable
+        gen_t_contents = [entry.replace('/usr/lib64', '/usr/lib') for entry in gen_t_contents]
         # Add $gen_t_contents to the existing $contents list
         contents = contents + gen_t_contents
         # Remove duplicates from everything but the first line, which is the shebang
