@@ -2,7 +2,7 @@
 from importlib.machinery import SourceFileLoader
 from importlib.util import module_from_spec,spec_from_loader
 from os import listdir,mkdir
-from os.path import abspath,basename,dirname,expanduser,join
+from os.path import abspath,basename,dirname,expanduser,isfile,join,realpath
 from shutil import copytree,rmtree
 from selinux import getfilecon
 from subprocess import run
@@ -109,6 +109,16 @@ class contents:
         # Return the $raw set
         return(raw)
 
+    def symlink(self, entry):
+        try:
+            # If $entry is a symlink, then obtain the full path to the real file
+            entry = realpath(entry)
+        except OSError:
+            # Otherwise, $entry is not a symlink, so do nothing
+            pass
+        # Return $entry
+        return(entry)
+
     def generic(self, raw, paths, generic_t):
         # Define a list of all entries within any of the $paths above
         entries = [entry for entry in raw if entry.startswith(paths)]
@@ -116,6 +126,8 @@ class contents:
         gen_t = []
         # Iterate through all entries within the $entries list
         for entry in entries:
+            # If $entry is a symlink, then obtain the full path to the real file. This is necessary because we don't want to label symlinks
+            entry = self.symlink(entry)
             # Skip all entries that start with the specified string
             if entry.startswith('/usr/lib/.build-id'): continue
             try:
@@ -124,6 +136,10 @@ class contents:
             except PermissionError:
                 # If the specified path is not accessible by the user that executed this script, then display a warning message to user
                 print(f"WARN: Unable to obtain the SELinux context for the following entry due to a permission error. You may need to run this script as root: '{entry}'")
+                continue
+            except FileNotFoundError:
+                # If $entry is not a valid file, then display a warning message to user
+                print(f"WARN: The following entry is not a valid file. This error occurs when a package's symlink is to a non-existent file and is often harmless: '{entry}'")
                 # Skip this entry
                 continue
             # If the label is generic, then add $entry to the $gen_t list
