@@ -118,8 +118,14 @@ class contents:
         for entry in entries:
             # Skip all entries that start with the specified string
             if entry.startswith('/usr/lib/.build-id'): continue
-            # Obtain the SELinux type context for the current entry
-            [_, _, setype] = contexts(entry)
+            try:
+                # Obtain the SELinux type context for the current entry
+                [_, _, setype] = contexts(entry)
+            except PermissionError:
+                # If the specified path is not accessible by the user that executed this script, then display a warning message to user
+                print(f"WARN: Unable to obtain the SELinux context for the following entry due to a permission error. You may need to run this script as root: '{entry}'")
+                # Skip this entry
+                continue
             # If the label is generic, then add $entry to the $gen_t list
             if setype == generic_t: gen_t.append(entry)
         # Set $gen_t to False if it's empty
@@ -132,7 +138,9 @@ class contents:
         if (lib_t is False): return(lib_t)
         # Only keep entries that have 'so' in the name once split via '.'
         lib_t = [entry for entry in lib_t if 'so' in entry.split('.')]
-        # Return the new $lib_t list
+        # If there is nothing left in $lib_t, then return False
+        if not lib_t: return(False)
+        # Otherwise, return the new $lib_t list
         return(lib_t)
 
 class selinux:
