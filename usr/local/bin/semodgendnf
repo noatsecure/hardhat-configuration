@@ -122,12 +122,12 @@ class contents:
     def generic(self, raw, paths, generic_t):
         # Define a list of all entries within any of the $paths above
         entries = [entry for entry in raw if entry.startswith(paths)]
+        # Create a complete set of all entries that contains symlinks as well as their targets
+        entries = set(entries + [self.symlink(entry) for entry in entries])
         # Define a list that will contain the path to all entries that are labeled $generic_t, which is a generic label
         gen_t = []
         # Iterate through all entries within the $entries list
         for entry in entries:
-            # If $entry is a symlink, then obtain the full path to the real file. This is necessary because we don't want to label symlinks
-            entry = self.symlink(entry)
             # Skip all entries that start with the specified string
             if entry.startswith('/usr/lib/.build-id'): continue
             try:
@@ -175,7 +175,7 @@ class selinux:
         # Check if both $bin_t and $lib_t are False
         if (bin_t is False) and (lib_t is False):
             # If so, then display an error message to user
-            print('ERROR: There are no binaries of type "bin_t" or libraries of type "lib_t"')
+            print('ERROR: There are no binaries of type \'bin_t\' or libraries of type \'lib_t\'')
             # Exit with an error
             exit(1)
 
