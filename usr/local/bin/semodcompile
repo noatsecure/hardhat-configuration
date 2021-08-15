@@ -75,7 +75,7 @@ isfile "${mod}";
 #######################
 
 # Generate a '.pp' file from the '.mod' file
-"${semodule_package}" -o "${pp}" -m "${mod}"
+"${semodule_package}" -o "${pp}" -m "${mod}";
 
 # Verify "$pp" exists
 isfile "${pp}";
