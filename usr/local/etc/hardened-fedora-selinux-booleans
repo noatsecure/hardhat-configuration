@@ -1,5 +1,5 @@
 #!/bin/sh
-/usr/sbin/semanage boolean -m domain_can_mmap_files   -1
+/usr/sbin/semanage boolean -m domain_can_mmap_files   -0
 /usr/sbin/semanage boolean -m use_virtualbox          -0
 #/usr/sbin/semanage boolean -m unconfined_login        -0
 /usr/sbin/semanage boolean -m deny_bluetooth          -1
