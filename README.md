@@ -13,10 +13,10 @@ https://www.whonix.org/wiki/Time_Attacks
 Note that HardHat uses a rewritten vesion of madaidan's original script. This rewritten script is simpler, uses better Bash practices (eg. using single quotes for strings, double quotes for variables, ending lines with semicolons), and allows for multiple retries in case of network issues. However, it does not have Tor support.
 
 ## Hardened malloc
-#### Credit: [GrapheneOS](https://github.com/GrapheneOS/hardened_malloc) (original), [Whonix](https://github.com/Whonix/hardened_malloc) (fork)
+#### Credit: [GrapheneOS](https://github.com/GrapheneOS/hardened_malloc)
 For a description of what the hardened memory allocator does, please see the README for the original project: https://github.com/GrapheneOS/hardened_malloc#introduction
 
-HardHat uses the hardened malloc from Whonix, and is compiled with the following options so that pipewire can work:
+HardHat compiles the hardened malloc with the following options:
 > CONFIG_SLAB_QUARANTINE_RANDOM_LENGTH=0
 > 
 > CONFIG_SLAB_QUARANTINE_QUEUE_LENGTH=0
