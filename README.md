@@ -1,11 +1,9 @@
 # HardHat
 #### This is ongoing project that is currently not ready for daily usage.
-HardHat is the Fedora alternative to the [Kicksecure](https://www.whonix.org/wiki/Kicksecure) project by the Whonix team that uses Debian. As an overview, both projects aim to provide a secure operating system [...]
-
-However, there are a few fundamental differences between the projects, mainly the choice of mandatory access control (MAC). Kicksecure utilizes apparmor for confining programs and services, while HardHat uses SELinux.
+HardHat is a hardening framework for the Fedora Linux operating system. The project aims to provide a more secure linux desktop experience through the use of SELinux, seccomp, and other security technologies. 
 
 ## SELinux
-HardHat heavily utilizes SELinux for confining programs such as chromium, thunderbird, mpv, and so on. SELinux is [description].
+Custom SELinux policies have been written for both applications as well as files and directories on the system.
 
 ## Secure date and time
 #### Credit: [madaidan](https://gitlab.com/madaidan/secure-time-sync) (original)
