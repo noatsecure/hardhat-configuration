@@ -1,9 +1,37 @@
 [Unit]
-Description=secure date and time
-After=network-online.target
+Description=set the date and time using HTTP headers
+After=network.target
+Wants=network.target
 
 [Service]
-ExecStart=/usr/local/bin/secure-date-time
+CapabilityBoundingSet=CAP_SYS_TIME
+ExecStart=/bin/sh secure-date-time
+MemoryDenyWriteExecute=true
+NoNewPrivileges=true
+PrivateDevices=true
+PrivateIPC=true
+PrivateTmp=true
+#PrivateUsers=true
+ProcSubset=pid
+ProtectControlGroups=true
+ProtectHome=true
+ProtectHostname=true
+ProtectKernelLogs=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectProc=noaccess
+ProtectSystem=strict
+RestrictAddressFamilies=AF_INET AF_INET6
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+SystemCallArchitectures=native
+SystemCallFilter=@clock @system-service
+SystemCallFilter=~@resources @obsolete
+Type=simple
+UMask=0077
+#User=secure-date-time
+WorkingDirectory=/usr/local/src/hardhat-bin
 
 [Install]
-WantedBy=network-online.target
+WantedBy=multi-user.target
